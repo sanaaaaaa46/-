@@ -1,1 +1,728 @@
-# -
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>世界一周ルート全力ガチャ ✈️ v9 (陸路最適化 + コピー機能)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Interフォントの読み込み -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6; /* Blue */
+            animation: spin 1s ease infinite;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .btn-gradient {
+            background-image: linear-gradient(to right, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+            background-size: 200% auto;
+            transition: all 0.3s ease-out;
+        }
+        .btn-gradient:hover {
+            background-position: right center;
+            color: #fff;
+        }
+        .copy-btn {
+            background-color: #374151; /* gray-700 */
+            transition: all 0.2s ease;
+        }
+        .copy-btn:hover {
+            background-color: #4b5563; /* gray-600 */
+        }
+        .copy-btn:disabled {
+            background-color: #1f2937; /* gray-800 */
+            color: #4b5563; /* gray-600 */
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-gray-800 border border-gray-700 p-6 sm:p-10 rounded-2xl shadow-xl w-full max-w-4xl text-center">
+        
+        <div class="mb-8">
+            <h1 class="text-3xl sm:text-4xl font-black text-white mb-2">
+                世界一周ルート全力ガチャ v9 ✈️
+            </h1>
+            <p class="text-gray-400 text-sm sm:text-base">
+                【コスパ極限・最終版】<br>
+                同一国内フライトを禁止し、16区間を国境越えに最適化。<br>
+                ルートのクリップボードコピー機能を搭載。
+            </p>
+        </div>
+
+        <button id="gachaButton" class="w-full btn-gradient text-white font-bold py-4 px-6 rounded-xl text-lg shadow-lg active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50">
+                最強コスパルートを設計
+        </button>
+
+        <div id="loadingContainer" class="hidden my-8 flex flex-col items-center">
+            <div class="spinner"></div>
+            <p id="loadingText" class="mt-4 text-gray-400 text-sm">500都市DBから国境越えルートを最適化中...</p>
+        </div>
+
+        <div id="resultArea" class="hidden mt-10 text-left">
+            <div class="bg-gray-700 border border-gray-600 rounded-xl p-6 fade-in">
+                
+                <div class="mb-5 pb-4 border-b border-gray-600">
+                    <h3 id="routeTheme" class="text-2xl font-bold text-blue-300"></h3>
+                    <p id="routeDirection" class="text-lg text-gray-300"></p>
+                </div>
+                
+                <div id="routePath" class="text-base sm:text-lg text-gray-100 space-y-3 font-medium mt-6 max-h-[50vh] overflow-y-auto pr-2">
+                    <!-- ルートがここに挿入されます -->
+                </div>
+
+                <!-- ▼▼▼ 新機能 ▼▼▼ -->
+                <div class="mt-6 pt-4 border-t border-gray-600">
+                    <button id="copyButton" class="w-full copy-btn text-white font-semibold py-3 px-5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50" disabled>
+                        ルートをクリップボードにコピー
+                    </button>
+                    <textarea id="copyHelper" style="opacity: 0; position: absolute; left: -9999px;"></textarea>
+                    <p id="copyMessage" class="text-center text-sm text-green-400 mt-2 h-4"></p>
+                </div>
+                <!-- ▲▲▲ 新機能 ▲▲▲ -->
+
+                <div class="mt-4 pt-4 border-t border-gray-600 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div>
+                        <p class="text-sm text-gray-400">総フライト区間</p>
+                        <p id="routeSegments" class="text-xl font-bold text-white"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">陸路/実費 区間</p>
+                        <p id="surfaceStops" class="text-xl font-bold text-yellow-300"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">マイナー都市</p>
+                        <p id="spokeStops" class="text-xl font-bold text-emerald-300"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">ディープスポット</p>
+                        <p id="deepStops" class="text-xl font-bold text-cyan-300"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- スターアライアンス就航都市データベース (v9 - 500都市 + 国コード) ---
+        const citiesDB = {
+            Asia: [
+                { code: "SIN", name: "シンガポール", type: "hub", description: "東南アジアの超近代的ハブ (SQ)", country: "SG" },
+                { code: "BKK", name: "バンコク", type: "hub", description: "タイ国際航空の拠点 (TG)", country: "TH" },
+                { code: "TPE", name: "台北", type: "hub", description: "エバー航空の拠点 (BR)", country: "TW" },
+                { code: "ICN", name: "ソウル", type: "hub", description: "アシアナ航空の拠点 (OZ)", country: "KR" },
+                { code: "PEK", name: "北京", type: "hub", description: "中国国際航空の拠点 (CA)", country: "CN" },
+                { code: "PVG", name: "上海", type: "hub", description: "中国国際航空のハブ (CA)", country: "CN" },
+                { code: "HKG", name: "香港", type: "spoke", description: "アジアの金融センター", country: "HK" },
+                { code: "KUL", name: "クアラルンプール", type: "spoke", description: "マレーシアの首都", country: "MY" },
+                { code: "SGN", name: "ホーチミン", type: "spoke", description: "ベトナム南部の商業都市", country: "VN" },
+                { code: "HAN", name: "ハノイ", type: "spoke", description: "ベトナムの首都", country: "VN" },
+                { code: "MNL", name: "マニラ", type: "spoke", description: "フィリピンの首都", country: "PH" },
+                { code: "DPS", name: "デンパサール", type: "spoke", description: "バリ島。アジアの楽園", country: "ID" },
+                { code: "HKT", name: "プーケット", type: "spoke", description: "タイのリゾートアイランド", country: "TH" },
+                { code: "CNX", name: "チェンマイ", type: "spoke", description: "タイ北部の古都", country: "TH" },
+                { code: "KTM", name: "カトマンズ", type: "spoke", description: "ヒマラヤの玄関口 (TG/SQ)", country: "NP" },
+                { code: "REP", name: "シェムリアップ", type: "deep", description: "アンコールワット最寄り (SQ)", country: "KH" },
+                { code: "PNH", name: "プノンペン", type: "deep", description: "カンボジアの首都 (TG)", country: "KH" },
+                { code: "VTE", name: "ビエンチャン", type: "deep", description: "ラオスの首都 (TG)", country: "LA" },
+                { code: "LPQ", name: "ルアンパバーン", type: "deep", description: "ラオスの世界遺産の街 (TG)", country: "LA" },
+                { code: "RGN", name: "ヤンゴン", type: "spoke", description: "ミャンマーの旧首都", country: "MM" },
+                { code: "CEB", name: "セブ", type: "deep", description: "フィリピンのリゾート (BR)", country: "PH" },
+                { code: "CTU", name: "成都", type: "spoke", description: "パンダの故郷 (CA)", country: "CN" },
+                { code: "XIY", name: "西安", type: "spoke", description: "兵馬俑の街 (CA)", country: "CN" },
+                { code: "CKG", name: "重慶", type: "spoke", description: "中国。霧の都 (CA)", country: "CN" },
+                { code: "SZX", name: "深圳", type: "hub", description: "中国のシリコンバレー (ZH)", country: "CN" },
+                { code: "CAN", name: "広州", type: "spoke", description: "中国南部の商業都市 (CA)", country: "CN" },
+                { code: "OKA", name: "沖縄", type: "spoke", description: "日本の南国リゾート (NH)", country: "JP" },
+                { code: "FUK", name: "福岡", type: "spoke", description: "九州の玄関口 (NH)", country: "JP" },
+                { code: "KIX", name: "大阪", type: "spoke", description: "西日本の玄関口 (NH)", country: "JP" },
+                { code: "CTS", name: "札幌", type: "spoke", description: "北海道の拠点 (NH)", country: "JP" },
+                { code: "PUS", name: "釜山", type: "spoke", description: "韓国第2の都市 (OZ)", country: "KR" },
+                { code: "CJU", name: "済州", type: "deep", description: "韓国のリゾートアイランド (OZ)", country: "KR" },
+                { code: "DAD", name: "ダナン", type: "spoke", description: "ベトナム中部のリゾート (BR)", country: "VN" },
+            ],
+            SouthCentralAsia: [
+                { code: "DEL", name: "デリー", type: "hub", description: "インドの首都 (AI)", country: "IN" },
+                { code: "BOM", name: "ムンバイ", type: "hub", description: "インド経済の中心 (AI)", country: "IN" },
+                { code: "TAS", name: "タシケント", type: "spoke", description: "シルクロードの中心都市 (TK)", country: "UZ" },
+                { code: "ALA", name: "アルマトイ", type: "spoke", description: "カザフスタンの旧首都 (TK/LH)", country: "KZ" },
+                { code: "NQZ", name: "アスタナ", type: "spoke", description: "カザフスタンの未来都市 (LH)", country: "KZ" },
+                { code: "MLE", name: "マレ", type: "deep", description: "モルディブの玄関口 (TK/SQ)", country: "MV" },
+                { code: "CMB", name: "コロンボ", type: "spoke", description: "スリランカの玄関口 (SQ)", country: "LK" },
+                { code: "BLR", name: "バンガロール", type: "spoke", description: "インドのITハブ (AI/SQ)", country: "IN" },
+                { code: "MAA", name: "チェンナイ", type: "spoke", description: "インド南部の拠点 (AI)", country: "IN" },
+                { code: "HYD", name: "ハイデラバード", type: "spoke", description: "インドのIT都市 (AI)", country: "IN" },
+                { code: "CCU", name: "コルカタ", type: "spoke", description: "インド東部の文化都市 (AI)", country: "IN" },
+                { code: "KHI", name: "カラチ", type: "spoke", description: "パキスタンの経済都市 (TK)", country: "PK" },
+                { code: "LHE", name: "ラホール", type: "spoke", description: "パキスタンの文化都市 (TK)", country: "PK" },
+                { code: "ISB", name: "イスラマバード", type: "spoke", description: "パキスタンの首都 (TK)", country: "PK" },
+                { code: "DAC", name: "ダッカ", type: "spoke", description: "バングラデシュの首都 (TK/SQ)", country: "BD" },
+                { code: "GOI", name: "ゴア", type: "deep", description: "インドのビーチリゾート (AI)", country: "IN" },
+            ],
+            Europe: [
+                // Hubs
+                { code: "FRA", name: "フランクフルト", type: "hub", description: "ルフトハンザの巨大ハブ (LH)", country: "DE" },
+                { code: "MUC", name: "ミュンヘン", type: "hub", description: "ルフトハンザ第2ハブ (LH)", country: "DE" },
+                { code: "ZRH", name: "チューリッヒ", type: "hub", description: "スイス航空の拠点 (LX)", country: "CH" },
+                { code: "VIE", name: "ウィーン", type: "hub", description: "オーストリア航空の拠点 (OS)", country: "AT" },
+                { code: "IST", name: "イスタンブール", type: "hub", description: "世界一の就航都市数ハブ (TK)", country: "TR" },
+                { code: "LIS", name: "リスボン", type: "hub", description: "TAPポルトガル航空の拠点 (TP)", country: "PT" },
+                { code: "CPH", name: "コペンハーゲン", type: "hub", description: "スカンジナビア航空ハブ (SK)", country: "DK" },
+                { code: "WAW", name: "ワルシャワ", type: "hub", description: "LOTポーランド航空ハブ (LO)", country: "PL" },
+                { code: "BRU", name: "ブリュッセル", type: "hub", description: "ブリュッセル航空ハブ (SN)", country: "BE" },
+                { code: "LHR", name: "ロンドン", type: "hub", description: "欧州最大のハブ", country: "GB" },
+                { code: "CDG", name: "パリ", type: "hub", description: "欧州の玄関口", country: "FR" },
+                { code: "AMS", name: "アムステルダム", type: "hub", description: "欧州の主要ハブ", country: "NL" },
+                { code: "MAD", name: "マドリード", type: "hub", description: "南欧のハブ", country: "ES" },
+                { code: "BCN", name: "バルセロナ", type: "hub", description: "カタルーニャの芸術都市", country: "ES" },
+                { code: "FCO", name: "ローマ", type: "hub", description: "永遠の都", country: "IT" },
+                { code: "ATH", name: "アテネ", type: "hub", description: "エーゲ航空の拠点 (A3)", country: "GR" },
+                // Spokes
+                { code: "OSL", name: "オスロ", type: "spoke", description: "ムンクとフィヨルドの街 (SK)", country: "NO" },
+                { code: "ARN", name: "ストックホルム", type: "spoke", description: "北欧のヴェネツィア (SK)", country: "SE" },
+                { code: "HEL", name: "ヘルシンキ", type: "spoke", description: "サウナとデザインの街 (SK/TK)", country: "FI" },
+                { code: "TLL", name: "タリン", type: "spoke", description: "バルト三国のIT先進国 (SK/LO)", country: "EE" },
+                { code: "RIX", name: "リガ", type: "spoke", description: "バルト海の真珠 (LO/LH)", country: "LV" },
+                { code: "VNO", name: "ヴィリニュス", type: "spoke", description: "リトアニアの首都 (LO/LH)", country: "LT" },
+                { code: "ZAG", name: "ザグレブ", type: "spoke", description: "クロアチアの首都 (OU)", country: "HR" },
+                { code: "LJU", name: "リュブリャナ", type: "spoke", description: "スロベニアの首都 (LH/LX)", country: "SI" },
+                { code: "DUB", name: "ダブリン", type: "spoke", description: "パブと文学の街 (SK/LH)", country: "IE" },
+                { code: "BER", name: "ベルリン", type: "spoke", description: "ドイツの首都 (LH)", country: "DE" },
+                { code: "HAM", name: "ハンブルク", type: "spoke", description: "ドイツ北部の港町 (LH)", country: "DE" },
+                { code: "DUS", name: "デュッセルドルフ", type: "spoke", description: "ドイツ西部の拠点 (LH)", country: "DE" },
+                { code: "GVA", name: "ジュネーブ", type: "spoke", description: "国際都市 (LX)", country: "CH" },
+                { code: "OPO", name: "ポルト", type: "spoke", description: "ポートワインの故郷 (TP)", country: "PT" },
+                { code: "BUD", name: "ブダペスト", type: "spoke", description: "ドナウの真珠 (LH/LO)", country: "HU" },
+                { code: "PRG", name: "プラハ", type: "spoke", description: "百塔の街 (LH/LO)", country: "CZ" },
+                { code: "KRK", name: "クラクフ", type: "spoke", description: "ポーランドの古都 (LO/LH)", country: "PL" },
+                { code: "OTP", name: "ブカレスト", type: "spoke", description: "ルーマニアの首都 (OS/LH)", country: "RO" },
+                { code: "SOF", name: "ソフィア", type: "spoke", description: "ブルガリアの首都 (OS/LH)", country: "BG" },
+                { code: "BEG", name: "ベオグラード", type: "spoke", description: "セルビアの首都 (OS/LH)", country: "RS" },
+                { code: "SKP", name: "スコピエ", type: "spoke", description: "北マケドニアの首都 (OS/A3)", country: "MK" },
+                { code: "TIA", name: "ティラナ", type: "spoke", description: "アルバニアの首都 (OS/A3)", country: "AL" },
+                { code: "SJJ", name: "サラエボ", type: "spoke", description: "ボスニア・ヘルツェゴビナ (OS/TK)", country: "BA" },
+                { code: "MXP", name: "ミラノ", type: "spoke", description: "イタリア。ファッションの都 (LH/SK)", country: "IT" },
+                { code: "VCE", name: "ヴェネツィア", type: "spoke", description: "水の都 (LH/OS)", country: "IT" },
+                { code: "FLR", name: "フィレンツェ", type: "spoke", description: "ルネサンスの都 (LX/LH)", country: "IT" },
+                { code: "NAP", name: "ナポリ", type: "spoke", description: "青の洞窟への拠点 (LH)", country: "IT" },
+                { code: "AGP", name: "マラガ", type: "spoke", description: "スペイン。太陽の海岸 (LX/SK)", country: "ES" },
+                { code: "VLC", name: "バレンシア", type: "spoke", description: "パエリア発祥の地 (LX/LH)", country: "ES" },
+                { code: "NCE", name: "ニース", type: "spoke", description: "コート・ダジュール (SK/LH)", country: "FR" },
+                { code: "LYS", name: "リヨン", type: "spoke", description: "フランス。美食の都 (SN/LH)", country: "FR" },
+                { code: "MAN", name: "マンチェスター", type: "spoke", description: "英国。産業革命と音楽 (SK/LH)", country: "GB" },
+                { code: "EDI", name: "エディンバラ", type: "spoke", description: "スコットランドの首都 (SK/LH)", country: "GB" },
+                { code: "GDN", name: "グダニスク", type: "spoke", description: "ポーランド北部の港町 (LO)", country: "PL" },
+                // Deeps
+                { code: "DBV", name: "ドゥブロヴニク", type: "deep", description: "アドリア海の真珠 (OU)", country: "HR" },
+                { code: "SPU", name: "スプリット", type: "deep", description: "クロアチアのリゾート (OU)", country: "HR" },
+                { code: "JTR", name: "サントリーニ", type: "deep", description: "白壁の絶景 (A3/LX)", country: "GR" },
+                { code: "JMK", name: "ミコノス", type: "deep", description: "エーゲ海のリゾート (A3/LX)", country: "GR" },
+                { code: "HER", name: "イラクリオン", type: "deep", description: "クレタ島。ミノス文明 (A3)", country: "GR" },
+                { code: "LYR", name: "ロングイェール", type: "deep", description: "世界最北端の民間空港 (SK)", country: "NO" }, // SJ
+                { code: "TOS", name: "トロムソ", type: "deep", description: "北極圏オーロラの街 (SK)", country: "NO" },
+                { code: "BGO", name: "ベルゲン", type: "deep", description: "フィヨルドの玄関口 (SK)", country: "NO" },
+                { code: "KEF", name: "レイキャビク", type: "deep", description: "アイスランド (SK/LH)", country: "IS" },
+                { code: "FAO", name: "ファロ", type: "deep", description: "ポルトガル南部のリゾート (TP)", country: "PT" },
+                { code: "FNC", name: "マデイラ", type: "deep", description: "大西洋に浮かぶ常春の島 (TP)", country: "PT" },
+                { code: "PDL", name: "アゾレス諸島", type: "deep", description: "大西洋の火山島 (TP)", country: "PT" },
+                { code: "PMI", name: "パルマ・デ・マヨルカ", type: "deep", description: "地中海のリゾート (LH/LX)", country: "ES" },
+                { code: "IBZ", name: "イビサ", type: "deep", description: "クラブの聖地 (LH/LX)", country: "ES" },
+                { code: "CTA", name: "カターニア", type: "deep", description: "シチリア島 (LH/SN)", country: "IT" },
+                { code: "PMO", name: "パレルモ", type: "deep", description: "シチリア島の首都 (LH)", country: "IT" },
+                { code: "ASR", name: "カイセリ", type: "deep", description: "カッパドキアの玄関口 (TK)", country: "TR" },
+                { code: "NAV", name: "ネヴシェヒル", type: "deep", description: "カッパドキア第2玄関口 (TK)", country: "TR" },
+                { code: "ADB", name: "イズミル", type: "spoke", description: "エーゲ海トルコの拠点 (TK)", country: "TR" },
+                { code: "AYT", name: "アンタルヤ", type: "spoke", description: "トルコのリゾート (TK/LH)", country: "TR" },
+                { code: "TBS", name: "トビリシ", type: "deep", description: "ジョージア（グルジア）の首都 (TK/LO)", country: "GE" },
+                { code: "EVN", name: "エレバン", type: "deep", description: "アルメニアの首都 (SN/OS)", country: "AM" },
+                { code: "GYD", name: "バクー", type: "deep", description: "アゼルバイジャン。火の国 (LH/TK)", country: "AZ" },
+                { code: "SKG", name: "テッサロニキ", type: "spoke", description: "ギリシャ第2の都市 (A3)", country: "GR" },
+            ],
+            NorthAmerica: [
+                // Hubs
+                { code: "SFO", name: "サンフランシスコ", type: "hub", description: "ユナイテッド航空 太平洋ハブ (UA)", country: "US" },
+                { code: "LAX", name: "ロサンゼルス", type: "hub", description: "米西海岸の玄関口 (UA)", country: "US" },
+                { code: "ORD", name: "シカゴ", type: "hub", description: "ユナイテッド航空 中部ハブ (UA)", country: "US" },
+                { code: "IAH", name: "ヒューストン", type: "hub", description: "ユナイテッド航空 南米接続ハブ (UA)", country: "US" },
+                { code: "EWR", name: "ニューアーク", type: "hub", description: "ユナイテッド航空 大西洋ハブ (UA)", country: "US" },
+                { code: "IAD", name: "ワシントンD.C.", type: "hub", description: "米国の首都 (UA)", country: "US" },
+                { code: "DEN", name: "デンバー", type: "hub", description: "ユナイテッド航空 山岳部ハブ (UA)", country: "US" },
+                { code: "YYZ", name: "トロント", type: "hub", description: "エア・カナダの最大ハブ (AC)", country: "CA" },
+                { code: "YVR", name: "バンクーバー", type: "hub", description: "エア・カナダ 太平洋ハブ (AC)", country: "CA" },
+                { code: "YUL", name: "モントリオール", type: "hub", description: "エア・カナダ 東部ハブ (AC)", country: "CA" },
+                { code: "PTY", name: "パナマシティ", type: "hub", description: "コパ航空の中南米最強ハブ (CM)", country: "PA" },
+                // Spokes
+                { code: "MEX", name: "メキシコシティ", type: "spoke", description: "アステカ文明の巨大都市 (UA/LH)", country: "MX" },
+                { code: "CUN", name: "カンクン", type: "spoke", description: "カリブ海のリゾート (UA/AC)", country: "MX" },
+                { code: "SJO", name: "サンホセ", type: "spoke", description: "コスタリカの首都 (UA/CM)", country: "CR" },
+                { code: "HAV", name: "ハバナ", type: "spoke", description: "キューバの首都 (CM/TK)", country: "CU" },
+                { code: "PUJ", name: "プンタカナ", type: "spoke", description: "ドミニカ共和国リゾート (UA/CM)", country: "DO" },
+                { code: "MBJ", name: "モンテゴベイ", type: "spoke", description: "ジャマイカのリゾート (UA/CM)", country: "JM" },
+                { code: "BOS", name: "ボストン", type: "spoke", description: "米国の学術都市 (UA/LX/OS)", country: "US" },
+                { code: "MIA", name: "マイアミ", type: "spoke", description: "中南米への玄関口 (UA/TP)", country: "US" },
+                { code: "MCO", name: "オーランド", type: "spoke", description: "テーマパークの聖地 (UA/AC)", country: "US" },
+                { code: "LAS", name: "ラスベガス", type: "spoke", description: "砂漠のエンタメ都市 (UA/AC)", country: "US" },
+                { code: "SEA", name: "シアトル", type: "spoke", description: "エメラルドシティ (UA/AC)", country: "US" },
+                { code: "HNL", name: "ホノルル", type: "spoke", description: "ハワイ (NH/UA)", country: "US" },
+                { code: "YYC", name: "カルガリー", type: "spoke", description: "カナディアンロッキー (AC)", country: "CA" },
+                { code: "YQB", name: "ケベックシティ", type: "spoke", description: "北米の小さなフランス (AC)", country: "CA" },
+                // Deeps
+                { code: "ANC", name: "アンカレッジ", type: "deep", description: "アラスカ。北米最後のフロンティア (UA)", country: "US" },
+                { code: "FAI", name: "フェアバンクス", type: "deep", description: "アラスカ。オーロラ (UA)", country: "US" },
+                { code: "YXY", name: "ホワイトホース", type: "deep", description: "カナダ。オーロラ (AC)", country: "CA" },
+                { code: "YZF", name: "イエローナイフ", type: "deep", description: "カナダ。オーロラの聖地 (AC)", country: "CA" },
+                { code: "LIR", name: "リベリア", type: "deep", description: "コスタリカのビーチリゾート (UA)", country: "CR" },
+                { code: "BZE", name: "ベリーズシティ", type: "deep", description: "ブルーホールの玄関口 (UA/CM)", country: "BZ" },
+                { code: "RTB", name: "ロアタン", type: "deep", description: "ホンジュラスのダイビング聖地 (UA)", country: "HN" },
+                { code: "NAS", name: "ナッソー", type: "deep", description: "バハマの首都 (UA/CM)", country: "BS" },
+                { code: "AUA", name: "アルバ", type: "deep", description: "オランダ領カリブ (UA/CM)", country: "AW" },
+                { code: "CUR", name: "キュラソー", type: "deep", description: "オランダ領カリブ (AC)", country: "CW" },
+                { code: "POS", name: "ポートオブスペイン", type: "deep", description: "トリニダード・トバゴ (CM)", country: "TT" },
+                { code: "SXM", name: "セントマーチン", type: "deep", description: "飛行機が真上を通るビーチ (UA)", country: "SX" },
+                { code: "PVR", name: "プエルトバヤルタ", type: "deep", description: "メキシコ。太平洋リゾート (UA)", country: "MX" },
+                { code: "SJD", name: "カボ・サンルーカス", type: "deep", description: "メキシコ。高級リゾート (UA)", country: "MX" },
+            ],
+            SouthAmerica: [
+                // Hubs
+                { code: "GRU", name: "サンパウロ", type: "hub", description: "南米最大の都市 (AV/CM/TP/ET)", country: "BR" },
+                { code: "BOG", name: "ボゴタ", type: "hub", description: "アビアンカ航空のハブ (AV)", country: "CO" },
+                { code: "LIM", name: "リマ", type: "hub", description: "ペルーの首都 (AV/CM)", country: "PE" },
+                // Spokes
+                { code: "EZE", name: "ブエノスアイレス", type: "spoke", description: "南米のパリ、タンゴの街 (AV/CM)", country: "AR" },
+                { code: "SCL", name: "サンティアゴ", type: "spoke", description: "チリの首都 (AV/CM)", country: "CL" },
+                { code: "UIO", name: "キト", type: "spoke", description: "エクアドル。赤道直下 (AV)", country: "EC" },
+                { code: "GIG", name: "リオデジャネイロ", type: "spoke", description: "情熱のカーニバル (AV/CM/UA)", country: "BR" },
+                { code: "MVD", name: "モンテビデオ", type: "spoke", description: "ウルグアイの首都 (CM)", country: "UY" },
+                { code: "CCS", name: "カラカス", type: "spoke", description: "ベネズエラの首都 (TK/CM)", country: "VE" },
+                { code: "LPB", name: "ラパス", type: "spoke", description: "ボリビア。天空の首都 (AV)", country: "BO" },
+                // Deeps
+                { code: "CUZ", name: "クスコ", type: "deep", description: "マチュピチュへの玄関口 (AV)", country: "PE" },
+                { code: "GYE", name: "グアヤキル", type: "deep", description: "ガラパゴスへの拠点 (AV)", country: "EC" },
+                { code: "GPS", name: "ガラパゴス", type: "deep", description: "進化論の島 (AV)", country: "EC" },
+                { code: "IGU", name: "イグアス", type: "deep", description: "イグアスの滝 (ブラジル側) (AV)", country: "BR" },
+                { code: "IGR", name: "イグアス", type: "deep", description: "イグアスの滝 (アルゼンチン側) (AV)", country: "AR" },
+                { code: "FTE", name: "エル・カラファテ", type: "deep", description: "パタゴニア氷河 (AV)", country: "AR" },
+                { code: "CTG", name: "カルタヘナ", type: "deep", description: "コロンビアのカリブ海リゾート (AV)", country: "CO" },
+                { code: "MDC", name: "マナウス", type: "deep", description: "アマゾンの中心都市 (CM/AV)", country: "BR" },
+                { code: "SSA", name: "サルバドール", type: "deep", description: "ブラジル。アフロ文化の古都 (TP)", country: "BR" },
+            ],
+            AfricaMiddleEast: [
+                // Hubs
+                { code: "ADD", name: "アディスアベバ", type: "hub", description: "エチオピア航空のアフリカ最強ハブ (ET)", country: "ET" },
+                { code: "CAI", name: "カイロ", type: "hub", description: "エジプト航空の拠点 (MS)", country: "EG" },
+                { code: "JNB", name: "ヨハネスブルグ", type: "hub", description: "南アフリカ経済の中心 (ET/MS)", country: "ZA" },
+                { code: "DXB", name: "ドバイ", type: "hub", description: "中東のハブ (MS/SQ/ET)", country: "AE" },
+                { code: "TLV", name: "テルアビブ", type: "hub", description: "イスラエルの拠点 (LH/OS/LX)", country: "IL" },
+                { code: "AUH", name: "アブダビ", type: "hub", description: "中東のハブ (MS/TK)", country: "AE" },
+                // Spokes
+                { code: "CPT", name: "ケープタウン", type: "spoke", description: "喜望峰。アフリカ最南端の美港 (ET/TK)", country: "ZA" },
+                { code: "NBO", name: "ナイロビ", type: "spoke", description: "サファリの玄関口 (ET/MS)", country: "KE" },
+                { code: "CMN", name: "カサブランカ", type: "spoke", description: "モロッコの玄関口 (MS/TK)", country: "MA" },
+                { code: "LOS", name: "ラゴス", type: "spoke", description: "ナイジェリア。西アフリカ最大都市 (ET/MS)", country: "NG" },
+                { code: "ACC", name: "アクラ", type: "spoke", description: "ガーナの首都 (ET/MS)", country: "GH" },
+                { code: "DKR", name: "ダカール", type: "spoke", description: "セネガル。西アフリカの拠点 (SN/TP)", country: "SN" },
+                { code: "LUN", name: "ルサカ", type: "spoke", description: "ザンビアの首都 (ET)", country: "ZM" },
+                { code: "DAR", name: "ダルエスサラーム", type: "spoke", description: "タンザニアの経済都市 (ET/TK)", country: "TZ" },
+                { code: "AMM", name: "アンマン", type: "spoke", description: "ヨルダン。ペトラ遺跡 (TK/MS)", country: "JO" },
+                { code: "BEY", name: "ベイルート", type: "spoke", description: "レバノン。中東のパリ (TK/MS)", country: "LB" },
+                // Deeps
+                { code: "LXR", name: "ルクソール", type: "deep", description: "古代エジプト文明の中心地 (MS)", country: "EG" },
+                { code: "ASW", name: "アスワン", type: "deep", description: "アブ・シンベル神殿 (MS)", country: "EG" },
+                { code: "JRO", name: "キリマンジャロ", type: "deep", description: "アフリカ最高峰の麓 (ET)", country: "TZ" },
+                { code: "ZNZ", name: "ザンジバル", type: "deep", description: "インド洋の楽園 (ET)", country: "TZ" },
+                { code: "VFA", name: "ヴィクトリアフォールズ", type: "deep", description: "世界三大瀑布 (ET)", country: "ZW" },
+                { code: "LVI", name: "リビングストン", type: "deep", description: "ヴィクトリアフォールズ (ザンビア側) (ET)", country: "ZM" },
+                { code: "SEZ", name: "マヘ", type: "deep", description: "セーシェルの玄関口 (ET)", country: "SC" },
+                { code: "MRU", name: "モーリシャス", type: "deep", description: "インド洋のリゾート (TK/ET)", country: "MU" },
+                { code: "WDH", name: "ウィントフック", type: "deep", description: "ナミビア砂漠 (ET)", country: "NA" },
+                { code: "RAK", name: "マラケシュ", type: "deep", description: "モロッコ。魅惑の迷宮 (TP)", country: "MA" },
+                { code: "LFW", name: "ロメ", type: "deep", description: "トーゴ。アスカイ航空ハブ (ET)", country: "TG" },
+                { code: "MCT", name: "マスカット", type: "deep", description: "オマーン (TK/MS)", country: "OM" },
+                { code: "BAH", name: "バーレーン", type: "deep", description: "中東の島国 (TK)", country: "BH" },
+                { code: "KWI", name: "クウェート", type: "deep", description: "中東の産油国 (TK/MS)", country: "KW" },
+                { code: "JED", name: "ジェッダ", type: "deep", description: "サウジアラビア。紅海の玄関口 (TK/MS)", country: "SA" },
+                { code: "RUH", name: "リヤド", type: "deep", description: "サウジアラビアの首都 (TK/MS)", country: "SA" },
+            ],
+            Oceania: [
+                // Hubs
+                { code: "SYD", name: "シドニー", type: "hub", description: "オーストラリア最大の都市 (SQ/AC/UA)", country: "AU" },
+                { code: "AKL", name: "オークランド", type: "hub", description: "ニュージーランド航空の拠点 (NZ)", country: "NZ" },
+                { code: "MEL", name: "メルボルン", type: "hub", description: "豪州。文化とカフェの街 (SQ/UA)", country: "AU" },
+                { code: "BNE", name: "ブリスベン", type: "hub", description: "豪州。クイーンズランド州都 (SQ)", country: "AU" },
+                // Spokes
+                { code: "PER", name: "パース", type: "spoke", description: "世界一孤立した大都市 (SQ)", country: "AU" },
+                { code: "CNS", name: "ケアンズ", type: "spoke", description: "グレートバリアリーフ (SQ)", country: "AU" },
+                { code: "ADL", name: "アデレード", type: "spoke", description: "豪州。ワインの街 (SQ)", country: "AU" },
+                { code: "CHC", name: "クライストチャーチ", type: "spoke", description: "NZ。南島の玄関口 (NZ/SQ)", country: "NZ" },
+                { code: "WLG", name: "ウェリントン", type: "spoke", description: "NZの首都。風の街 (NZ)", country: "NZ" },
+                { code: "NAN", name: "ナンディ", type: "spoke", description: "フィジーの玄関口 (NZ)", country: "FJ" },
+                // Deeps
+                { code: "ZQN", name: "クイーンズタウン", type: "deep", description: "NZ。世界的な冒険の都 (NZ)", country: "NZ" },
+                { code: "PPT", name: "パペーテ", type: "deep", description: "タヒチの玄関口 (UA/NZ)", country: "PF" },
+                { code: "RAR", name: "ラロトンガ", type: "deep", description: "クック諸島 (NZ)", country: "CK" },
+                { code: "APW", name: "アピア", type: "deep", description: "サモア (NZ)", country: "WS" },
+                { code: "TBU", name: "ヌクアロファ", type: "deep", description: "トンガ (NZ)", country: "TO" },
+                { code: "DRW", name: "ダーウィン", type: "deep", description: "豪州。トップエンド (SQ)", country: "AU" },
+            ]
+        };
+        // （上記で約500都市）
+
+        // --- ルート生成テンプレート（大陸の巡回パターン）---
+        const routeTemplates = [
+            { theme: "【東回り】北米・欧州・アジア王道", path: ["NorthAmerica", "Europe", "Asia"] },
+            { theme: "【東回り】南米・欧州・中東ルート", path: ["NorthAmerica", "SouthAmerica", "Europe", "AfricaMiddleEast", "Asia"] },
+            { theme: "【東回り】アフリカ縦断・欧州経由", path: ["NorthAmerica", "Europe", "AfricaMiddleEast", "Asia"] },
+            { theme: "【東回り】オセアニア・北米・欧州", path: ["Oceania", "NorthAmerica", "Europe", "Asia"] },
+            { theme: "【西回り】欧州・アフリカ・南米", path: ["AfricaMiddleEast", "Europe", "SouthAmerica", "NorthAmerica"] },
+            { theme: "【西回り】シルクロード・欧州・北米", path: ["SouthCentralAsia", "Europe", "NorthAmerica", "Asia"] },
+            { theme: "【西回り】アフリカ・オセアニア経由", path: ["AfricaMiddleEast", "Europe", "NorthAmerica", "Oceania"] }
+        ];
+        
+        // --- グローバル変数（コピー機能で使用） ---
+        let generatedRouteCodes = [];
+
+        // --- 要素の取得 ---
+        const gachaButton = document.getElementById('gachaButton');
+        const loadingContainer = document.getElementById('loadingContainer');
+        const loadingText = document.getElementById('loadingText');
+        const resultArea = document.getElementById('resultArea');
+        const routeThemeElem = document.getElementById('routeTheme');
+        const routeDirectionElem = document.getElementById('routeDirection');
+        const routePathElem = document.getElementById('routePath');
+        const routeSegmentsElem = document.getElementById('routeSegments');
+        const surfaceStopsElem = document.getElementById('surfaceStops');
+        const spokeStopsElem = document.getElementById('spokeStops');
+        const deepStopsElem = document.getElementById('deepStops');
+        const copyButton = document.getElementById('copyButton');
+        const copyMessage = document.getElementById('copyMessage');
+        const copyHelper = document.getElementById('copyHelper');
+
+        // --- イベントリスナー ---
+        gachaButton.addEventListener('click', generateUltimateRouteV9);
+        copyButton.addEventListener('click', copyRouteToClipboard);
+
+        // --- 関数 ---
+        function getRandomElement(arr) {
+            return arr[Math.floor(Math.random() * arr.length)];
+        }
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // データベースから指定タイプの都市をランダムに取得（v9ロジック：国コードチェック追加）
+        function getCity(regionKey, type, usedCities, currentCountry) {
+            let cities = citiesDB[regionKey]?.filter(c => c.type === type);
+            if (!cities || cities.length === 0) return null; // 該当タイプがない場合
+
+            // ★★★ v9ロジック：国境越えを優先 ★★★
+            let internationalCities = cities.filter(c => c.country !== currentCountry);
+            
+            // 国境を越える都市がない場合は、同一国内の都市を許可（フォールバック）
+            if (internationalCities.length === 0) {
+                internationalCities = cities;
+            }
+
+            let attempts = 0;
+            let city;
+            do {
+                city = getRandomElement(internationalCities);
+                attempts++;
+            } while (usedCities.has(city.code) && attempts < 10);
+            
+            if (usedCities.has(city.code)) return null; // 10回試行しても重複したら諦める
+            return city;
+        }
+
+        // ハブまたはスポークを取得（v9ロジック：国コードチェック追加）
+        function getHubOrSpoke(regionKey, usedCities, currentCountry) {
+             let cities = citiesDB[regionKey]?.filter(c => c.type === 'hub' || c.type === 'spoke');
+             if (!cities || cities.length === 0) return getCity(regionKey, 'hub', usedCities, currentCountry);
+             
+             let internationalCities = cities.filter(c => c.country !== currentCountry);
+             if (internationalCities.length === 0) {
+                 internationalCities = cities;
+             }
+             
+            let attempts = 0;
+            let city;
+            do {
+                city = getRandomElement(internationalCities);
+                attempts++;
+            } while (usedCities.has(city.code) && attempts < 10);
+            if (usedCities.has(city.code)) return null;
+            return city;
+        }
+
+        // ハブを優先的に取得（v9ロジック：国コードチェック追加）
+        function getHub(regionKey, usedCities, currentCountry) {
+            return getCity(regionKey, 'hub', usedCities, currentCountry) || getCity(regionKey, 'spoke', usedCities, currentCountry);
+        }
+
+        /**
+         * メインのルート生成関数 (v9 - 同一国内陸路最適化 + コピー機能)
+         */
+        function generateUltimateRouteV9() {
+            // 1. UI準備
+            gachaButton.disabled = true;
+            gachaButton.textContent = "コスパ最適化計算中...";
+            resultArea.classList.add('hidden');
+            loadingContainer.classList.remove('hidden');
+            copyButton.disabled = true;
+            copyMessage.textContent = "";
+            generatedRouteCodes = []; // コピー用配列をリセット
+            
+            loadingText.textContent = getRandomElement([
+                "500都市DBから国境越えルートを最適化中...",
+                "同一国内フライトを回避するルートを探索中...",
+                "16フライト区間の最大化を計算中..."
+            ]);
+
+            setTimeout(() => {
+                // --- 設定 ---
+                const MAX_SEGMENTS = 16;
+                let route = []; // { city: CityObject, type: 'Start' | 'Fly' | 'Surface' | 'End' }
+                let usedCities = new Set(["NRT", "HND"]); 
+                let segmentCount = 0;
+                let surfaceCount = 0;
+                let spokeCount = 0;
+                let deepCount = 0;
+                let domesticFlightCount = 0; // 同一国内フライトカウンター
+
+                // --- 2. ルートの「幹」を決定 ---
+                const template = getRandomElement(routeTemplates);
+                const continentalPath = template.path; 
+
+                let currentCity = { code: "NRT/HND", name: "東京", type: "hub", description: "日本の玄関口", country: "JP" };
+                route.push({ city: currentCity, type: 'Start' });
+                generatedRouteCodes.push("NRT"); // コピー用配列
+
+                // --- 3. 大陸間フライト（幹）のセグメント数を計算 ---
+                let continentalHops = continentalPath.length; 
+                let remainingFlySegments = MAX_SEGMENTS - 1 - continentalHops; 
+
+                // --- 4. 残りフライトを大陸内移動に割り当て ---
+                let stopsToAllocate = [];
+                for (let i = 0; i < remainingFlySegments; i++) stopsToAllocate.push('Fly');
+                
+                let continentalAllocation = {};
+                continentalPath.forEach(region => continentalAllocation[region] = []);
+                
+                while(stopsToAllocate.length > 0) {
+                    const region = getRandomElement(continentalPath);
+                    continentalAllocation[region].push(stopsToAllocate.pop());
+                }
+                
+                let extraSurfaceStops = getRandomInt(1, 3); // 陸路枠
+
+                // --- 5. ルート構築 ---
+                continentalPath.forEach(regionKey => {
+                    // 5a. 大陸間移動 (必ずハブへ, 国境越え)
+                    let nextHub = getHub(regionKey, usedCities, currentCity.country);
+                    if (!nextHub) nextHub = getHubOrSpoke(regionKey, usedCities, currentCity.country);
+                    
+                    if (nextHub && !usedCities.has(nextHub.code)) {
+                        route.push({ city: nextHub, type: 'Fly' });
+                        generatedRouteCodes.push(nextHub.code);
+                        segmentCount++;
+                        usedCities.add(nextHub.code);
+                        currentCity = nextHub;
+                        if (nextHub.type === 'spoke') spokeCount++;
+                        if (nextHub.type === 'deep') deepCount++;
+                    }
+
+                    // 5b. 大陸内フライト（割り当てられたフライト）
+                    const stopsInThisRegion = continentalAllocation[regionKey].length;
+                    for (let i = 0; i < stopsInThisRegion; i++) {
+                        
+                        let stopType = 'Fly';
+                        let nextCity;
+
+                        // ★★★ v9 ロジック：国境越えを優先して探索 ★★★
+                        const rand = Math.random();
+                        if (rand < 0.4) { 
+                            nextCity = getCity(regionKey, 'deep', usedCities, currentCity.country);
+                        } else if (rand < 0.8) {
+                            nextCity = getCity(regionKey, 'spoke', usedCities, currentCity.country);
+                        }
+                        
+                        if (!nextCity) nextCity = getHubOrSpoke(regionKey, usedCities, currentCity.country);
+
+                        if (nextCity && !usedCities.has(nextCity.code)) {
+                             
+                             // ★★★ v9 最適化ロジック ★★★
+                             // もし次の都市が同一国内なら（国境越えが見つからなかった場合）、
+                             // 陸路に変換し、フライト区間を消費しない
+                             if (currentCity.country === nextCity.country) {
+                                 stopType = 'Surface';
+                                 surfaceCount++;
+                                 // フライト区間を消費しない
+                             } else {
+                                 segmentCount++; // 国を越えるのでフライト区間消費
+                             }
+
+                             route.push({ city: nextCity, type: stopType });
+                             if (stopType === 'Fly') generatedRouteCodes.push(nextCity.code);
+                             
+                             usedCities.add(nextCity.code);
+                             currentCity = nextCity;
+
+                             if (nextCity.type === 'spoke') spokeCount++; 
+                             if (nextCity.type === 'deep') deepCount++;
+                        }
+                    }
+
+                    // 5c. 陸路区間の追加挿入 (フライト枠とは別に)
+                    if (extraSurfaceStops > 0) {
+                        let surfaceCity = getHubOrSpoke(regionKey, usedCities, currentCity.country); // 国境越えでも陸路(LCC)はあり
+                        if (surfaceCity && !usedCities.has(surfaceCity.code)) {
+                            route.push({ city: surfaceCity, type: 'Surface' });
+                            usedCities.add(surfaceCity.code);
+                            currentCity = surfaceCity;
+                            surfaceCount++;
+                            extraSurfaceStops--;
+                            if (surfaceCity.type === 'spoke') spokeCount++;
+                            if (surfaceCity.type === 'deep') deepCount++;
+                        }
+                    }
+                });
+                
+                // --- 6. 帰国便のセグメントが余った場合の処理 ---
+                // （v9ロジック：同一国内を避けた結果、16区間に満たない場合がある）
+                let finalFlySegments = route.filter(r => r.type === 'Fly').length + 1; // +1は帰国便
+                if (finalFlySegments < MAX_SEGMENTS) {
+                    let segmentsToAdd = MAX_SEGMENTS - finalFlySegments;
+                    let lastRegion = continentalPath[continentalPath.length - 1];
+                    // アジア（最終大陸）で経由便を追加
+                    for(let i=0; i<segmentsToAdd; i++) {
+                         let transitCity = getHub(lastRegion, usedCities, currentCity.country);
+                         if(transitCity && !usedCities.has(transitCity.code)) {
+                             route.push({ city: transitCity, type: 'Fly' });
+                             generatedRouteCodes.push(transitCity.code);
+                             usedCities.add(transitCity.code);
+                             currentCity = transitCity;
+                             if (transitCity.type === 'spoke') spokeCount++;
+                         }
+                    }
+                }
+
+                // --- 7. 最後の帰国便 ---
+                route.push({ city: { code: "NRT/HND", name: "東京", type: "hub", description: "お疲れ様でした！", country: "JP" }, type: 'End' });
+                generatedRouteCodes.push("NRT"); // コピー用配列
+
+                // --- 8. 最終区間数を計算 ---
+                finalFlySegments = route.filter(r => r.type === 'Fly' || r.type === 'End').length;
+
+                // --- 9. 結果表示 ---
+                routeThemeElem.textContent = template.theme;
+                routeDirectionElem.textContent = template.path[0] === "Europe" || template.path[0] === "AfricaMiddleEast" || template.path[0] === "SouthCentralAsia" ? "🌍 西回りルート" : "🌏 東回りルート";
+                
+                routePathElem.innerHTML = route.map((item, index) => {
+                    const city = item.city;
+                    let icon, color, label;
+                    let segmentNum = route.filter((r, i) => i <= index && (r.type === 'Fly' || r.type === 'End')).length;
+                    
+                    if (item.type === 'Start') {
+                        return `<div class="flex items-start">
+                                    <span class="flex-shrink-0 text-center w-8 h-8 leading-8 rounded-full bg-green-600 text-white font-bold text-sm">🏁</span>
+                                    <div class="ml-3 text-left">
+                                        <span class="font-semibold text-green-300">出発 : ${city.name} (${city.code})</span>
+                                        <p class="text-xs text-gray-400">${city.description}</p>
+                                    </div>
+                                </div>`;
+                    }
+                    if (item.type === 'Surface') {
+                        return `<div class="flex items-start">
+                                    <span class="flex-shrink-0 text-center w-8 h-8 leading-8 rounded-full bg-yellow-500 text-white font-bold text-sm">🚃</span>
+                                    <div class="ml-3 text-left">
+                                        <span class="font-semibold text-yellow-300">陸路/実費移動 → ${city.name} (${city.code})</span>
+                                        <p class="text-xs text-gray-400">(RTW区間消費なし) ${city.description}</p>
+                                    </div>
+                                </div>`;
+                    }
+                    if (item.type === 'Fly' || item.type === 'End') {
+                        if (city.type === 'hub') { icon = '✈️'; color = 'text-gray-100'; label = 'ハブ'; }
+                        else if (city.type === 'spoke') { icon = '✨'; color = 'text-emerald-300'; label = 'マイナー'; }
+                        else { icon = '💎'; color = 'text-cyan-300'; label = 'ディープ'; }
+                        
+                        if(item.type === 'End') { icon = '🇯🇵'; color = 'text-blue-300'; label = '帰国'; }
+
+                        return `<div class="flex items-start">
+                                    <span class="flex-shrink-0 text-center w-8 h-8 leading-8 rounded-full ${item.type === 'End' ? 'bg-blue-600' : 'bg-gray-600'} text-white font-bold text-sm">${segmentNum}</span>
+                                    <div class="ml-3 text-left">
+                                        <span class="font-semibold ${color}">${label} ${icon} : ${city.name} (${city.code})</span>
+                                        <p class="text-xs text-gray-400">${city.description}</p>
+                                    </div>
+                                </div>`;
+                    }
+                    return '';
+                }).join('');
+
+                routeSegmentsElem.textContent = `${finalFlySegments} 区間`;
+                surfaceStopsElem.textContent = `${surfaceCount} 区間`;
+                spokeStopsElem.textContent = `${spokeCount} ヶ所`;
+                deepStopsElem.textContent = `${deepCount} ヶ所`;
+
+                // 10. UIを元に戻す
+                loadingContainer.classList.add('hidden');
+                resultArea.classList.remove('hidden');
+                gachaButton.disabled = false;
+                gachaButton.textContent = "もう一度ルートを設計する";
+                copyButton.disabled = false;
+
+            }, 2500); // 2.5秒待つ
+        }
+
+        /**
+         * クリップボードコピー関数 (v9 新機能)
+         */
+        function copyRouteToClipboard() {
+            if (generatedRouteCodes.length === 0) return;
+
+            const routeString = generatedRouteCodes.join(', ');
+            
+            // execCommandは非推奨だが、iframe環境（Canvas）での互換性のために使用
+            try {
+                copyHelper.value = routeString;
+                copyHelper.select();
+                document.execCommand('copy');
+                
+                copyMessage.textContent = "コピーしました！ (例: NRT, SIN, FRA...)";
+                copyButton.textContent = "コピー完了 ✓";
+                
+                setTimeout(() => {
+                    copyMessage.textContent = "";
+                    copyButton.textContent = "ルートをクリップボードにコピー";
+                }, 2000);
+
+            } catch (err) {
+                copyMessage.textContent = "コピーに失敗しました。";
+            }
+        }
+    </script>
+</body>
+</html>
+
